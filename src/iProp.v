@@ -50,7 +50,7 @@ Qed.
 
 Module iProp.
   Definition t := Ordinal.t -> Prop.
-  Definition le (P0 P1: t): Prop := forall i (IN: P0 i), P1 i.
+  Definition le (P0 P1: t): Prop := forall o (IN: P0 o), P1 o.
 
   Global Program Instance le_PreOrder: PreOrder le.
   Next Obligation.
@@ -62,7 +62,7 @@ Module iProp.
     ii. eauto.
   Qed.
 
-  Definition eq (P0 P1: t): Prop := forall i, P0 i <-> P1 i.
+  Definition eq (P0 P1: t): Prop := forall o, P0 o <-> P1 o.
 
   Global Program Instance le_Equivalence: Equivalence eq.
   Next Obligation.
@@ -94,10 +94,10 @@ Module iProp.
   Definition ge := flip le.
 
   Definition closed (P: t): Prop :=
-    forall i0 i1 (IN: P i0) (LE: Ordinal.le i0 i1), P i1.
+    forall o0 o1 (IN: P o0) (LE: Ordinal.le o0 o1), P o1.
 
   Definition next (P: t): t :=
-    fun i1 => exists i0, P i0 /\ Ordinal.lt i0 i1.
+    fun o1 => exists o0, P o0 /\ Ordinal.lt o0 o1.
 
   Lemma next_le P (CLOSED: closed P): le (next P) P.
   Proof.
@@ -106,7 +106,7 @@ Module iProp.
 
   Lemma next_mon P0 P1 (LE: le P0 P1): le (next P0) (next P1).
   Proof.
-    unfold next in *. ii. des. exists i0; eauto.
+    unfold next in *. ii. des. exists o0; eauto.
   Qed.
 
   Lemma next_closed P: closed (next P).
@@ -182,7 +182,7 @@ Module iProp.
 
 
   Definition meet A (Ps: A -> t): t :=
-    fun i => forall a, Ps a i.
+    fun o => forall a, Ps a o.
 
   Lemma meet_mon A Ps0 Ps1 (LE: forall (a: A), le (Ps0 a) (Ps1 a)): le (meet Ps0) (meet Ps1).
   Proof.
@@ -210,7 +210,7 @@ Module iProp.
 
 
   Definition join A (Ps: A -> t): t :=
-    fun i => exists a, Ps a i.
+    fun o => exists a, Ps a o.
 
   Lemma join_mon A Ps0 Ps1 (LE: forall (a: A), le (Ps0 a) (Ps1 a)): le (join Ps0) (join Ps1).
   Proof.
@@ -239,7 +239,7 @@ Module iProp.
 
 
   Definition future (P: t): t :=
-    fun i1 => exists i0, P i0.
+    fun o1 => exists o0, P o0.
 
   Lemma future_mon P0 P1 (LE: le P0 P1): le (future P0) (future P1).
   Proof.
@@ -304,7 +304,7 @@ Module iProp.
   Proof.
     destruct INHABITED. unfold next, join.
     eapply le_Antisymmetric.
-    - ii. des. exists i0. esplits; eauto.
+    - ii. des. exists o0. esplits; eauto.
     - ii. des. esplits; eauto.
   Qed.
 
@@ -332,7 +332,7 @@ Module iProp.
     :
       le (next (meet k)) (meet (fun a: A => next (k a))).
   Proof.
-    unfold next. ii. des. exists i0. splits; auto.
+    unfold next. ii. des. exists o0. splits; auto.
   Qed.
 
   Remark not_meet_next:
@@ -361,7 +361,7 @@ Module iProp.
       { eapply x1. }
       { eapply Ordinal.join_supremum. i.
         specialize (x0 a).
-        clear - x0. revert i0 x0. induction a; ss.
+        clear - x0. revert o0 x0. induction a; ss.
         { i. eapply Ordinal.O_bot. }
         { i. unfold next in x0. des. eapply IHa in x0.
           eapply Ordinal.S_spec in x1. etransitivity.
@@ -431,11 +431,11 @@ Module iProp.
 
 
   Definition closure (P: t): t :=
-    fun i1 => exists i0, P i0 /\ Ordinal.le i0 i1.
+    fun o1 => exists o0, P o0 /\ Ordinal.le o0 o1.
 
   Lemma closure_le P: le P (closure P).
   Proof.
-    ii. exists i. split; auto. reflexivity.
+    ii. exists o. split; auto. reflexivity.
   Qed.
 
   Lemma closure_mon P0 P1 (LE: le P0 P1): le (closure P0) (closure P1).
@@ -446,12 +446,12 @@ Module iProp.
   Lemma closure_closed P: closed (closure P).
   Proof.
     ii. destruct IN. des.
-    exists x. split; auto. transitivity i0; auto.
+    exists x. split; auto. transitivity o0; auto.
   Qed.
 
   Lemma closure_eq_closed P (CLOSED: le (closure P) P): closed P.
   Proof.
-    ii. eapply CLOSED. exists i0; auto.
+    ii. eapply CLOSED. exists o0; auto.
   Qed.
 
   Lemma closed_closure_eq P (CLOSED: closed P): le (closure P) P.
@@ -460,7 +460,7 @@ Module iProp.
   Qed.
 
 
-  Definition inhabited (P: t) := exists i, P i.
+  Definition inhabited (P: t) := exists o, P o.
 
   Lemma le_inhabited P0 P1 (LE: le P0 P1) (INHABITED: inhabited P0):
     inhabited P1.
@@ -512,7 +512,7 @@ Module iProp.
         (CLOSED: forall a, closed (Ps a)):
     inhabited (meet Ps).
   Proof.
-    hexploit (choice (fun a i => Ps a i) INHABITED). i. des.
+    hexploit (choice (fun a o => Ps a o) INHABITED). i. des.
     exists (Ordinal.join f). ii.
     eapply CLOSED; eauto. eapply Ordinal.join_upperbound.
   Qed.
@@ -539,22 +539,67 @@ Module iProp.
     destruct INHABITED. destruct H. exists x0, x. auto.
   Qed.
 
-  Definition upper (i0: Ordinal.t): t := fun i1 => Ordinal.le i0 i1.
+  Definition upper (o0: Ordinal.t): t := fun o1 => Ordinal.le o0 o1.
 
-  Lemma upper_inhabited i0: inhabited (upper i0).
+  Lemma upper_inhabited o0: inhabited (upper o0).
   Proof.
-    exists i0. reflexivity.
+    exists o0. reflexivity.
   Qed.
 
-  Lemma upper_closed i0: closed (upper i0).
+  Lemma upper_closed o0: closed (upper o0).
   Proof.
-    ii. transitivity i1; auto.
+    ii. transitivity o1; auto.
   Qed.
 
   Lemma le_upper i (P: t) (IN: P i) (CLOSED: closed P): le (upper i) P.
   Proof.
     ii. eapply CLOSED; eauto.
   Qed.
+
+  Definition next_o (P: t) (i: Ordinal.t): t := Ordinal.rec meet next P i.
+
+  Lemma next_o_closed (P: t) (CLOSED: closed P) o: closed (next_o P o).
+  Proof.
+    eapply (Ordinal.rec_wf ge meet closed next P).
+    { i. unfold ge in *. transitivity d1; auto. }
+    { i. eapply meet_lowerbound. }
+    { i. eapply meet_infimum. auto. }
+    { i. eapply meet_closed. auto. }
+    { auto. }
+    { i. eapply next_closed. }
+    { i. eapply next_mon. auto. }
+  Qed.
+
+  Lemma next_o_le P o: le (next_o P o) P.
+  Proof.
+    eapply (Ordinal.rec_le_base ge meet (fun _ => True) next P).
+    { i. unfold ge in *. transitivity d1; auto. }
+    { i. eapply meet_lowerbound. }
+    { i. eapply meet_infimum. auto. }
+    { ss. }
+    { ss. }
+    { ss. }
+    { i. eapply next_mon. auto. }
+  Qed.
+
+  Lemma next_o_mon P0 P1 (LE: le P0 P1) o: le (next_o P0 o) (next_o P1 o).
+  Proof.
+    eapply (@Ordinal.rec_mon t ge meet P1 next P0 next); auto.
+    { i. eapply next_mon. auto. }
+    { econs; ii; eauto. }
+    { i. eapply meet_lowerbound. }
+    { i. eapply meet_infimum. auto. }
+  Qed.
+
+  Lemma next_o_decr P o0 o1 (LE: Ordinal.le o0 o1): le (next_o P o1) (next_o P o0).
+  Proof.
+    eapply (@Ordinal.rec_le t ge meet (fun _ => True) next P); eauto.
+    { i. unfold ge in *. transitivity d1; auto. }
+    { i. eapply meet_lowerbound. }
+    { i. eapply meet_infimum. auto. }
+    { i. eapply next_mon. auto. }
+  Qed.
+
 
   Section KAPPA.
     Variable X: Type.
