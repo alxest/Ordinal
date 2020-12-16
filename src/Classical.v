@@ -2287,7 +2287,7 @@ Module ClassicalOrdinal.
     Proof.
       transitivity (Ordinal.from_wf_set (to_total_well_founded o)).
       { eapply cardinal_is_cardinal.
-        exists _, (to_total_well_founded o). split; auto.
+        exists (to_total_rel o), (to_total_well_founded o). split; auto.
         - eapply to_total_total.
         - reflexivity.
       }
@@ -2603,7 +2603,7 @@ Module ClassicalOrdinal.
     is_cardinal (to_total_set (Ordinal.join (fun x => cardinal (TS x)))) (Ordinal.join (fun x => cardinal (TS x))).
   Proof.
     split.
-    { exists _, (to_total_well_founded _). splits.
+    { exists (to_total_rel (Ordinal.join (fun x : X => cardinal (TS x)))), (to_total_well_founded _). splits.
       - eapply to_total_total.
       - symmetry. eapply to_total_eq. }
     { i. des. eapply Ordinal.join_supremum. i. etransitivity.
