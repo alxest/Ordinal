@@ -1755,7 +1755,7 @@ Module Ordinal.
       eapply rec_red.
     Qed.
 
-    Lemma rec_add base o0 o1 (WF: wf base):
+    Lemma rec_app base o0 o1 (WF: wf base):
       deq (rec base next djoin (add o0 o1)) (rec (rec base next djoin o0) next djoin o1).
     Proof.
       induction o1.

@@ -26,12 +26,64 @@ Section LATTICE.
     ii. eauto.
   Qed.
 
+  Definition prefixpoint (f: rel -> rel) (r: rel) := le (f r) r.
+  Definition postfixpoint (f: rel -> rel) (r: rel) := le r (f r).
+
+  Definition mu (f: rel -> rel): rel :=
+    fun x => forall (r: rel) (FIX: prefixpoint f r), r x.
+
+  Lemma mu_least f r (FIX: prefixpoint f r):
+    le (mu f) r.
+  Proof.
+    ii. eapply IN. auto.
+  Qed.
+
+  Lemma mu_fold f (MON: monotone1 f):
+    le (f (mu f)) (mu f).
+  Proof.
+    ii. eapply FIX. eapply MON; eauto.
+    i. eapply mu_least; eauto.
+  Qed.
+
+  Lemma mu_unfold f (MON: monotone1 f):
+    le (mu f) (f (mu f)).
+  Proof.
+    ii. eapply IN. ii. eapply MON; eauto.
+    i. ss. eapply mu_fold; eauto.
+  Qed.
+
+
+  Definition nu (f: rel -> rel): rel :=
+    fun x => exists (r: rel), postfixpoint f r /\ r x.
+
+  Lemma nu_greatest f r (FIX: postfixpoint f r):
+    le r (nu f).
+  Proof.
+    ii. exists r. eauto.
+  Qed.
+
+  Lemma nu_unfold f (MON: monotone1 f):
+    le (nu f) (f (nu f)).
+  Proof.
+    ii. unfold nu in IN. des. eapply IN in IN0. eapply MON; eauto.
+    i. eapply nu_greatest; eauto.
+  Qed.
+
+  Lemma nu_fold f (MON: monotone1 f):
+    le (f (nu f)) (nu f).
+  Proof.
+    ii. exists (f (nu f)). split; auto.
+    ii. eapply MON; eauto. i. eapply nu_unfold; auto.
+  Qed.
+
+
   Variable F: rel -> rel -> rel.
   Hypothesis MON: forall rg0 rl0 rg1 rl1 (LEG: le rg0 rg1) (LEL: le rl0 rl1),
       le (F rg0 rl0) (F rg1 rl1).
 
-  Opaque iProp.future iProp.next.
+  Definition munu: rel := nu (fun r => mu (F r)).
 
+  Opaque iProp.future iProp.next.
 
   Definition closure: irel -> irel :=
     fun r x => iProp.closure (r x).
@@ -42,10 +94,203 @@ Section LATTICE.
   Qed.
   Hint Resolve closure_mon: paco.
 
+  Definition iF (ir: irel): irel :=
+    fun x1 i =>
+      F (fun x0 => iProp.future (ir x0) i) (fun x0 => iProp.next (ir x0) i) x1.
+
+  Lemma iF_mon: monotone2 iF.
+  Proof.
+    ii. eapply MON; eauto.
+    - ii. eapply iProp.future_mon; eauto. ii. auto.
+    - ii. eapply iProp.next_mon; eauto. ii. auto.
+  Qed.
+  Hint Resolve iF_mon: paco.
+
+  Lemma closure_compatible: compatible2 iF closure.
+  Proof.
+    unfold closure. econs; eauto.
+    { ii. eapply iProp.closure_mon; eauto. ii. auto. }
+    { i. inv PR. des. eapply MON; [..|eauto].
+      { ii. eapply iProp.closure_future. exists x. split; eauto. }
+      { ii. eapply iProp.closure_next. exists x. split; eauto. }
+    }
+  Qed.
+
+  Lemma gpaco_closed r rg:
+    forall x, iProp.closed (gpaco2 iF (cpn2 iF) r rg x).
+  Proof.
+    ii. gclo. econs.
+    { eapply closure_compatible. }
+    { eexists. eauto. }
+  Qed.
+
+  Lemma paco_closed: forall x, iProp.closed (paco2 iF bot2 x).
+  Proof.
+    i. eapply iProp.closure_eq_closed. revert x. ginit.
+    { i. eapply cpn2_wcompat. eapply iF_mon. }
+    i. gclo. econs.
+    { eapply closure_compatible. }
+    eapply iProp.closure_mon; eauto. ii. gfinal. auto.
+  Qed.
+
+  Lemma nu_paco (f: rel -> rel) (MONO: monotone1 f):
+    forall x, paco1 f bot1 x <-> nu f x.
+  Proof.
+    i. split.
+    { revert x. eapply nu_greatest.
+      ii. punfold IN. eapply MONO; eauto. i. pclearbot. auto. }
+    { revert x. pcofix CIH. i. pfold.
+      apply nu_unfold in H0; auto. eapply MONO; eauto. }
+  Qed.
+
+  Variable kappa: Ordinal.t.
+
+  Lemma kappa_exists:
+    forall x i1 (IN: paco2 iF bot2 x i1),
+    exists i0, paco2 iF bot2 x i0 /\ Ordinal.lt i0 kappa.
+  Admitted.
+
+  Lemma ipaco_munu:
+    forall x, munu x <-> exists i, paco2 iF bot2 x i.
+  Proof.
+    i. split.
+    - i. unfold munu in H. eapply nu_unfold in H.
+      2: { admit. }
+      eapply H. ii. exists kappa. pfold. eapply MON; eauto.
+      { ii. eexists. left.
+
+      unfold iF.
+
+
+      pfold. eapply H0.
+
+      eapply H. ii.
+
+
+
+
+
+      eapply F_
+
+      clear. ii.
+
+
+
+      admit.
+    - i. des. revert i x H.
+      eapply (well_founded_induction Ordinal.lt_well_founded (fun i => forall x (IN: paco2 iF bot2 x i), munu x)).
+      i.
+
+      { i.
+
+      induction i.
+
+
+      eapply nu_paco.
+      { admit. }
+      revert x H. pcofix CIH. i.
+      punfold H0. pfold. apply mu_fold.
+      { ii. eapply MON; eauto. ii. eauto. }
+      eapply MON; eauto.
+      { ii. inv IN. pclearbot. eauto. }
+      { ii. inv IN. des. pclearbot. punfold H. eapply FIX.
+        eapply MON; [..|eapply H].
+        { ii. inv IN. right. eapply CIH. pfold.
+          pclearbot. punfold H2. }
+        { ii. inv IN. des. pclearbot. dup H2. punfold H2. eapply FIX.
+          eapply MON; [..|eapply H2].
+          { ii. inv IN. pclearbot. right. eauto. }
+          { ii. inv IN. eapply FIX. des. inv H5.
+
+
+  Lemma ipaco_munu:
+    forall x, munu x <-> exists i, paco2 iF bot2 x i.
+  Proof.
+    i. split.
+    - admit.
+    - i. eapply nu_paco.
+      { admit. }
+      revert x H. pcofix CIH. i.
+      punfold H0. pfold. apply mu_fold.
+      { ii. eapply MON; eauto. ii. eauto. }
+      eapply MON; eauto.
+      { ii. inv IN. pclearbot. eauto. }
+      { ii. inv IN. des. pclearbot. punfold H. eapply FIX.
+        eapply MON; [..|eapply H].
+        { ii. inv IN. right. eapply CIH. pfold.
+          pclearbot. punfold H2. }
+        { ii. inv IN. des. pclearbot. dup H2. punfold H2. eapply FIX.
+          eapply MON; [..|eapply H2].
+          { ii. inv IN. pclearbot. right. eauto. }
+          { ii. inv IN. eapply FIX. des. inv H5.
+
+            eapply CIH.
+
+            pfold.
+
+          eauto.
+
+
+          eapply MON
+
+
+        eauto.
+
+        eapply MON; eauto.
+        {
+
+        inv IN0. des. pclearbot.
+
+
+      { ii.
+
+
+        eapply upaco1_mon
+
+      inv H0.
+
+
+
+      revert x. eapply nu_greatest.
+      Local Opaque mu. ii. des. eapply mu_fold.
+      { ii. eapply MON; eauto. ii. eauto. }
+      punfold IN. eapply MON; [..| eapply IN].
+      { ii. inv IN0. pclearbot. eauto. }
+      { ii. inv IN0. des. pclearbot.
+
+
+
+        inv IN0.
+
+        eapply IN0. eapply mu_fold.
+
+        inv IN0. des. pclearbot. eapply FIX.
+eapply M
+
+
+        admit. }
+      ii.
+
+      ii. des.
+      punfold IN. ss. eapply FIX. eapply MON; [..| eapply IN].
+      { ii. inv IN0. pclearbot. eauto. }
+      { ii. inv IN0. des. pclearbot. eapply FIX.
+
+        exists i. eapp
+
+
+      eapply H.
+
+    {
+
+
+
+
+
 
   Definition iF_o (o: Ordinal.t) (ir: irel): irel :=
     fun x1 i =>
-      F (fun x0 => iProp.future (ir x0) i) (fun x0 => iProp.next_o o (ir x0) i) x1.
+      F (fun x0 => iProp.future (ir x0) i) (fun x0 => iProp.next_o (ir x0) o i) x1.
 
   Lemma iF_o_mon o: monotone2 (iF_o o).
   Proof.
@@ -63,7 +308,7 @@ Section LATTICE.
     pcofix CIH. i. punfold IN. pfold.
     eapply MON; eauto.
     { ii. eapply iProp.future_mon; eauto. ii. destruct IN1; eauto. }
-    { ii. cut (iProp.next_o o0 (upaco2 (iF_o o1) r x0) o).
+    { ii. cut (iProp.next_o (upaco2 (iF_o o1) r x0) o0 o).
       { i. eapply iProp.next_o_mon; eauto. ii. destruct IN1; eauto. }
       { eapply iProp.next_o_decr; eauto. }
     }
@@ -145,7 +390,7 @@ Section LATTICE.
   Qed.
 
   Lemma paco_index_eq:
-    forall x, iProp.eq (paco2 iF bot2 x) (paco2 (iF_o (Ordinal.S Ordinal.O)) bot2 x).
+    forall x o, paco2 iF bot2 x o <-> paco2 (iF_o (Ordinal.S Ordinal.O)) bot2 x o.
   Proof.
     Local Opaque iProp.next_o.
     i. split.
@@ -155,9 +400,8 @@ Section LATTICE.
       { ii. eapply iProp.future_mon; eauto. ii.
         pclearbot. gfinal. left. eauto. }
       { unfold le. i. eapply iProp.next_o_S.
-        { eapply gpaco_o_closed. }
-        { eapply iProp.next_mon; eauto. ii.
-          eapply iProp.next_o_O. pclearbot. gfinal. auto. }
+        eapply iProp.next_mon; eauto. ii. pclearbot.
+        eapply iProp.next_o_O. eapply iProp.closure_le. gfinal. auto.
       }
     }
     { revert x o. ginit.
@@ -169,7 +413,9 @@ Section LATTICE.
         { eapply iProp.next_mon; eauto. ii.
           cut (upaco2 (iF_o (Ordinal.S Ordinal.O)) bot2 x0 o0).
           { i. pclearbot. gfinal. auto. }
-          { eapply iProp.next_o_O. eauto. }
+          { right. left.
+
+            eapply iProp.next_o_O. eauto. }
         }
         { ii. pclearbot. left. eapply paco_o_closed; eauto. }
       }
