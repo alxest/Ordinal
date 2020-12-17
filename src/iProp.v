@@ -556,9 +556,9 @@ Module iProp.
     ii. eapply CLOSED; eauto.
   Qed.
 
-  Definition next_o (P: t) (i: Ordinal.t): t := Ordinal.rec meet next P i.
+  Definition next_o (o: Ordinal.t) (P: t): t := Ordinal.rec meet next P o.
 
-  Lemma next_o_closed (P: t) (CLOSED: closed P) o: closed (next_o P o).
+  Lemma next_o_closed (P: t) (CLOSED: closed P) o: closed (next_o o P).
   Proof.
     eapply (Ordinal.rec_wf ge meet closed next P).
     { i. unfold ge in *. transitivity d1; auto. }
@@ -570,7 +570,7 @@ Module iProp.
     { i. eapply next_mon. auto. }
   Qed.
 
-  Lemma next_o_le P o: le (next_o P o) P.
+  Lemma next_o_le P o: le (next_o o P) P.
   Proof.
     eapply (Ordinal.rec_le_base ge meet (fun _ => True) next P).
     { i. unfold ge in *. transitivity d1; auto. }
@@ -582,7 +582,7 @@ Module iProp.
     { i. eapply next_mon. auto. }
   Qed.
 
-  Lemma next_o_mon P0 P1 (LE: le P0 P1) o: le (next_o P0 o) (next_o P1 o).
+  Lemma next_o_mon P0 P1 (LE: le P0 P1) o: le (next_o o P0) (next_o o P1).
   Proof.
     eapply (@Ordinal.rec_mon t ge meet P1 next P0 next); auto.
     { i. eapply next_mon. auto. }
@@ -591,7 +591,7 @@ Module iProp.
     { i. eapply meet_infimum. auto. }
   Qed.
 
-  Lemma next_o_decr P o0 o1 (LE: Ordinal.le o0 o1): le (next_o P o1) (next_o P o0).
+  Lemma next_o_decr P o0 o1 (LE: Ordinal.le o0 o1): le (next_o o1 P) (next_o o0 P).
   Proof.
     eapply (@Ordinal.rec_le t ge meet (fun _ => True) next P); eauto.
     { i. unfold ge in *. transitivity d1; auto. }
@@ -600,6 +600,54 @@ Module iProp.
     { i. eapply next_mon. auto. }
   Qed.
 
+  Lemma closure_future P: le (closure (future P)) (future (closure P)).
+  Proof.
+    ii. inv IN. des. inv H.
+    exists x0, x0. split; auto. reflexivity.
+  Qed.
+
+  Lemma closure_next P: le (closure (next P)) (next (closure P)).
+  Proof.
+    ii. eapply next_mon.
+    { eapply closure_le. }
+    { eapply closed_closure_eq; eauto. eapply next_closed. }
+  Qed.
+
+  Lemma closure_next_o o P: le (closure (next_o o P)) (next_o o (closure P)).
+  Proof.
+    induction o. ii. ss. inv IN. des. ii. destruct a.
+    { specialize (H0 true). ss. exists x. split; auto. }
+    { specialize (H0 false). ss. ii. specialize (H0 a). ss.
+      eapply next_mon.
+      { eapply H. }
+      { eapply closure_next. eexists. eauto. }
+    }
+  Qed.
+
+  Lemma next_o_O P: eq (next_o Ordinal.O P) P.
+  Proof.
+    hexploit (Ordinal.rec_O ge meet (fun _ => True) next P); auto.
+    { i. unfold ge in *. reflexivity. }
+    { i. unfold ge in *. transitivity d1; auto. }
+    { i. eapply meet_lowerbound. }
+    { i. eapply meet_infimum. auto. }
+    { i. eapply next_mon. auto. }
+    i. des. split; auto. eapply H.
+  Qed.
+
+  Lemma next_o_S o P (CLOSED: closed P):
+    eq (next_o (Ordinal.S o) P) (next (next_o o P)).
+  Proof.
+    hexploit (Ordinal.rec_S ge meet closed next P); auto.
+    { i. unfold ge in *. transitivity d1; auto. }
+    { i. eapply meet_lowerbound. }
+    { i. eapply meet_infimum. auto. }
+    { i. eapply meet_closed. auto. }
+    { i. eapply next_closed. }
+    { i. eapply next_le. auto. }
+    { i. eapply next_mon. auto. }
+    i. des. split; eauto. eapply H.
+  Qed.
 
   Section KAPPA.
     Variable X: Type.
