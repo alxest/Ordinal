@@ -556,23 +556,25 @@ Module iProp.
     ii. eapply CLOSED; eauto.
   Qed.
 
-  Definition next_o (o: Ordinal.t) (P: t): t := Ordinal.rec meet next P o.
+  Definition next_o (o: Ordinal.t) (P: t): t := Ordinal.rec meet next (closure P) o.
 
-  Lemma next_o_closed (P: t) (CLOSED: closed P) o: closed (next_o o P).
+  Lemma next_o_closed (P: t) o: closed (next_o o P).
   Proof.
-    eapply (Ordinal.rec_wf ge meet closed next P).
+    eapply (Ordinal.rec_wf ge meet closed next (closure P)).
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
     { i. eapply meet_closed. auto. }
-    { auto. }
+    { eapply closure_closed. }
     { i. eapply next_closed. }
     { i. eapply next_mon. auto. }
   Qed.
 
-  Lemma next_o_le P o: le (next_o o P) P.
+  Lemma next_o_le P o (CLOSED: closed P): le (next_o o P) P.
   Proof.
-    eapply (Ordinal.rec_le_base ge meet (fun _ => True) next P).
+    transitivity (closure P).
+    2: { eapply closed_closure_eq. auto. }
+    eapply (Ordinal.rec_le_base ge meet (fun _ => True) next (closure P)).
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
@@ -584,7 +586,8 @@ Module iProp.
 
   Lemma next_o_mon P0 P1 (LE: le P0 P1) o: le (next_o o P0) (next_o o P1).
   Proof.
-    eapply (@Ordinal.rec_mon t ge meet P1 next P0 next); auto.
+    eapply (@Ordinal.rec_mon t ge meet (closure P1) next (closure P0) next); auto.
+    { eapply closure_mon. auto. }
     { i. eapply next_mon. auto. }
     { econs; ii; eauto. }
     { i. eapply meet_lowerbound. }
@@ -593,7 +596,7 @@ Module iProp.
 
   Lemma next_o_decr P o0 o1 (LE: Ordinal.le o0 o1): le (next_o o1 P) (next_o o0 P).
   Proof.
-    eapply (@Ordinal.rec_le t ge meet (fun _ => True) next P); eauto.
+    eapply (@Ordinal.rec_le t ge meet (fun _ => True) next (closure P)); eauto.
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
@@ -624,9 +627,9 @@ Module iProp.
     }
   Qed.
 
-  Lemma next_o_O P: eq (next_o Ordinal.O P) P.
+  Lemma next_o_O P: eq (next_o Ordinal.O P) (closure P).
   Proof.
-    hexploit (Ordinal.rec_O ge meet (fun _ => True) next P); auto.
+    hexploit (Ordinal.rec_O ge meet (fun _ => True) next (closure P)); auto.
     { i. unfold ge in *. reflexivity. }
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
@@ -635,14 +638,25 @@ Module iProp.
     i. des. split; auto. eapply H.
   Qed.
 
+  Lemma next_o_O_closed P (CLOSED: closed P): eq (next_o Ordinal.O P) P.
+  Proof.
+    transitivity (closure P).
+    { eapply next_o_O. }
+    { split.
+      { eapply closed_closure_eq. auto. }
+      { eapply closure_le. }
+    }
+  Qed.
+
   Lemma next_o_S o P (CLOSED: closed P):
     eq (next_o (Ordinal.S o) P) (next (next_o o P)).
   Proof.
-    hexploit (Ordinal.rec_S ge meet closed next P); auto.
+    hexploit (Ordinal.rec_S ge meet closed next (closure P)); auto.
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
     { i. eapply meet_closed. auto. }
+    { eapply closure_closed. }
     { i. eapply next_closed. }
     { i. eapply next_le. auto. }
     { i. eapply next_mon. auto. }
