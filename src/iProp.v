@@ -556,11 +556,11 @@ Module iProp.
     ii. eapply CLOSED; eauto.
   Qed.
 
-  Definition next_o (o: Ordinal.t) (P: t): t := Ordinal.rec meet next (closure P) o.
+  Definition next_o (o: Ordinal.t) (P: t): t := Ordinal.rec (closure P) next meet o.
 
   Lemma next_o_closed (P: t) o: closed (next_o o P).
   Proof.
-    eapply (Ordinal.rec_wf ge meet closed next (closure P)).
+    eapply (Ordinal.rec_wf (closure P) next meet ge closed).
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
@@ -574,7 +574,7 @@ Module iProp.
   Proof.
     transitivity (closure P).
     2: { eapply closed_closure_eq. auto. }
-    eapply (Ordinal.rec_le_base ge meet (fun _ => True) next (closure P)).
+    eapply (Ordinal.rec_le_base (closure P) next meet ge (fun _ => True)).
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
@@ -596,7 +596,7 @@ Module iProp.
 
   Lemma next_o_decr P o0 o1 (LE: Ordinal.le o0 o1): le (next_o o1 P) (next_o o0 P).
   Proof.
-    eapply (@Ordinal.rec_le t ge meet (fun _ => True) next (closure P)); eauto.
+    eapply (Ordinal.rec_le (closure P) next meet ge (fun _ => True)); auto.
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
@@ -629,7 +629,7 @@ Module iProp.
 
   Lemma next_o_O P: eq (next_o Ordinal.O P) (closure P).
   Proof.
-    hexploit (Ordinal.rec_O ge meet (fun _ => True) next (closure P)); auto.
+    hexploit (Ordinal.rec_O (closure P) next meet ge (fun _ => True)); auto.
     { i. unfold ge in *. reflexivity. }
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
@@ -648,10 +648,10 @@ Module iProp.
     }
   Qed.
 
-  Lemma next_o_S o P (CLOSED: closed P):
+  Lemma next_o_S o P:
     eq (next_o (Ordinal.S o) P) (next (next_o o P)).
   Proof.
-    hexploit (Ordinal.rec_S ge meet closed next (closure P)); auto.
+    hexploit (Ordinal.rec_S (closure P) next meet ge closed); auto.
     { i. unfold ge in *. transitivity d1; auto. }
     { i. eapply meet_lowerbound. }
     { i. eapply meet_infimum. auto. }
