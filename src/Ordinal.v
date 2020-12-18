@@ -450,6 +450,29 @@ Module Ordinal.
       eapply lt_le_lt; eauto.
   Qed.
 
+  Lemma build_join A (os: A -> t) (OPEN: open os): eq (build os) (join os).
+  Proof.
+    eapply is_join_eq.
+    { eapply build_is_join. auto. }
+    { eapply join_is_join. }
+  Qed.
+
+  Lemma build_is_join_S A (os: A -> t):
+    is_join (fun a => S (os a)) (build os).
+  Proof.
+    econs.
+    { i. eapply S_spec. eapply build_upperbound. }
+    { i. eapply build_spec. i. eapply (@lt_le_lt (S (os a))); auto. eapply S_lt. }
+  Qed.
+
+  Lemma build_join_S A (os: A -> t):
+    eq (build os) (join (fun a => S (os a))).
+  Proof.
+    eapply is_join_eq.
+    { eapply build_is_join_S. }
+    { eapply join_is_join. }
+  Qed.
+
   Definition union (o0 o1: t): t := @join bool (fun b: bool => if b then o0 else o1).
 
   Lemma union_l o0 o1: le o0 (union o0 o1).
@@ -1794,19 +1817,49 @@ Module Ordinal.
   End RECAPP.
 
   Section KAPPA.
-    Variable X: MyT.
+    Let U := Type.
+    Variable X: U.
 
-    Inductive tree: MyT :=
+    Record inaccessible (base: t) (next: t -> t) (k: t): Prop :=
+      mk_inaccessible
+        { inaccessible_base: lt base k;
+          inaccessible_next: forall o (LT: lt o k), lt (next o) k;
+          inaccessible_join: forall (os: X -> t) (LT: forall a, lt (os a) k),
+              lt (join os) k;
+          inaccessible_union: forall o0 o1 (LT0: lt o0 k) (LT1: lt o1 k),
+              lt (union o0 o1) k;
+        }.
+
+    Lemma inaccessible_mon base0 base1 next0 next1 k
+          (BASE: lt base0 k)
+          (NEXT: forall o (LT: lt o k), le (next0 o) (next1 o))
+          (INACCESSIBLE: inaccessible base1 next1 k)
+      :
+        inaccessible base0 next0 k.
+    Proof.
+      econs.
+      { des; auto. }
+      { i. eapply le_lt_lt; eauto.
+        eapply INACCESSIBLE.(inaccessible_next). auto. }
+      { eapply INACCESSIBLE.(inaccessible_join). }
+      { eapply INACCESSIBLE. }
+    Qed.
+
+    Definition S_inaccessible (k: t): Prop := inaccessible O S k.
+
+    Inductive tree: U :=
     | tree_O
-    | tree_S (tl: tree)
-    | tree_join (tls: X -> tree)
+    | tree_S (tr: tree)
+    | tree_join (trs: X -> tree)
+    | tree_union (tr0 tr1: tree)
     .
 
     Definition tree_lt (tr0 tr1: tree): Prop :=
       match tr1 with
       | tree_O => False
-      | tree_S tl => tr0 = tl
-      | tree_join tls => exists x, tr0 = tls x
+      | tree_S tr => tr0 = tr
+      | tree_join trs => exists x, tr0 = trs x
+      | tree_union trl trr => tr0 = trl \/ tr0 = trr
       end.
 
     Lemma tree_lt_well_founded: well_founded tree_lt.
@@ -1815,35 +1868,229 @@ Module Ordinal.
       { econs. ii. ss. }
       { econs. i. ss. subst. auto. }
       { econs. i. ss. des. subst. auto. }
+      { econs. i. ss. des; subst; auto. }
+    Qed.
+
+    Lemma tree_O_O: eq (from_wf tree_lt_well_founded tree_O) O.
+    Proof.
+      split.
+      { unfold from_wf. destruct (tree_lt_well_founded tree_O).
+        ss. econs. i. destruct a0. ss. }
+      { eapply O_bot. }
+    Qed.
+
+    Lemma tree_S_S tr:
+      eq (from_wf tree_lt_well_founded (tree_S tr)) (S (from_wf tree_lt_well_founded tr)).
+    Proof.
+      split.
+      { unfold from_wf at 1. destruct (tree_lt_well_founded (tree_S tr)).
+        ss. econs. i. destruct a0. ss. subst. exists tt.
+        ss. eapply same_acc_le.
+      }
+      { eapply S_spec. eapply from_wf_lt. ss. }
+    Qed.
+
+    Lemma tree_join_build (trs: X -> tree):
+      eq (from_wf tree_lt_well_founded (tree_join trs)) (build (fun x => from_wf tree_lt_well_founded (trs x))).
+    Proof.
+      split.
+      { unfold from_wf at 1. destruct (tree_lt_well_founded (tree_join trs)).
+        ss. econs. i. destruct a0. des. ss. subst. exists x0.
+        ss. eapply same_acc_le.
+      }
+      { eapply build_spec. i. eapply from_wf_lt. ss. eauto. }
+    Qed.
+
+    Lemma tree_union_union_le (tr0 tr1: tree):
+      le (from_wf tree_lt_well_founded (tree_union tr0 tr1)) (S (union (from_wf tree_lt_well_founded tr0) (from_wf tree_lt_well_founded tr1))).
+    Proof.
+      unfold from_wf at 1. destruct (tree_lt_well_founded (tree_union tr0 tr1)).
+      ss. econs. i. destruct a0. ss. exists tt. ss. des; subst.
+      { transitivity (from_wf tree_lt_well_founded tr0).
+        { eapply same_acc_le. }
+        { eapply union_l. }
+      }
+      { transitivity (from_wf tree_lt_well_founded tr1).
+        { eapply same_acc_le. }
+        { eapply union_r. }
+      }
+    Qed.
+
+    Lemma tree_union_union_le_rev (tr0 tr1: tree):
+      le (union (from_wf tree_lt_well_founded tr0) (from_wf tree_lt_well_founded tr1)) (from_wf tree_lt_well_founded (tree_union tr0 tr1)).
+    Proof.
+      eapply union_spec.
+      { eapply lt_le. eapply from_wf_lt. ss. auto. }
+      { eapply lt_le. eapply from_wf_lt. ss. auto. }
     Qed.
 
     Definition kappa := from_wf_set tree_lt_well_founded.
 
-    Lemma kappa_O: lt O kappa.
+    Lemma inaccessible_rec_inaccessible (base0: t) (next: t -> t)
+          (NEXTLE: forall o, le o (next o))
+          (NEXTMON: forall o0 o1 (LE: le o0 o1), le (next o0) (next o1))
+          (INACCESSIBLE: inaccessible base0 next kappa)
+          base1
+          (BASE1: lt base1 kappa)
+      :
+        inaccessible base0 (orec base1 next) kappa.
+    Proof.
+      econs; eauto.
+      { eapply INACCESSIBLE. }
+      2: { eapply INACCESSIBLE. }
+      2: { eapply INACCESSIBLE. }
+      assert (RECS: forall tr, lt (orec base1 next (from_wf tree_lt_well_founded tr)) kappa).
+      { induction tr.
+        { eapply (@eq_lt_lt _ _ base1); auto.
+          transitivity (orec base1 next O).
+          { eapply orec_eq; auto. eapply tree_O_O. }
+          { eapply orec_O; auto. }
+        }
+        { eapply (@eq_lt_lt _ _ (next (orec base1 next (from_wf tree_lt_well_founded tr)))).
+          { transitivity (orec base1 next (S (from_wf tree_lt_well_founded tr))).
+            { eapply orec_eq; auto. eapply tree_S_S. }
+            { eapply orec_S; auto. }
+          }
+          { eapply INACCESSIBLE. auto. }
+        }
+        { eapply (@eq_lt_lt _ _ _).
+          { etransitivity.
+            { eapply orec_eq; auto. eapply tree_join_build. }
+            { eapply orec_build. }
+          }
+          { eapply INACCESSIBLE; auto. eapply INACCESSIBLE. i.
+            eapply INACCESSIBLE. auto. }
+        }
+        { eapply le_lt_lt.
+          { eapply orec_le.
+            { auto. }
+            { eapply tree_union_union_le. }
+          }
+          eapply eq_lt_lt.
+          { eapply orec_S; auto. }
+          eapply INACCESSIBLE.
+          eapply eq_lt_lt.
+          { eapply orec_union; auto. }
+          { eapply INACCESSIBLE; auto. }
+        }
+      }
+      i. eapply lt_inv in LT. des. eapply (@le_lt_lt (orec base1 next (from_wf tree_lt_well_founded a))); auto.
+      eapply orec_le; auto.
+    Qed.
+
+    Lemma kappa_O
+      :
+        lt O kappa.
     Proof.
       econs. instantiate (1:=tree_O). eapply O_bot.
     Qed.
 
-    Lemma kappa_S o (LT: lt o kappa):
-      lt (S o) kappa.
+    Lemma kappa_S o (LT: lt o kappa)
+      :
+        lt (S o) kappa.
     Proof.
-      eapply lt_inv in LT. des.
+      i. eapply lt_inv in LT. des.
       econs. instantiate (1:=tree_S a).
       eapply S_spec. eapply le_lt_lt; eauto.
       eapply from_wf_lt. ss.
     Qed.
 
-    Lemma kappa_join
-          (CHOICE: FunctionalChoice_on X tree)
-          (os: X -> t)
-          (LT: forall x, lt (os x) kappa):
-      lt (join os) kappa.
+    Lemma kappa_union o0 o1 (LT0: lt o0 kappa) (LT1: lt o1 kappa)
+      :
+        lt (union o0 o1) kappa.
     Proof.
-      hexploit (CHOICE (fun (x: X) (tr: tree) => le (os x) (from_wf tree_lt_well_founded tr))).
-      { i. specialize (LT x). eapply lt_inv in LT. eauto. } i. des.
+      eapply lt_inv in LT0. eapply lt_inv in LT1. des.
+      econs. instantiate (1:=tree_union a0 a). eapply union_spec.
+      { etransitivity; eauto. eapply lt_le. eapply from_wf_lt. ss. auto. }
+      { etransitivity; eauto. eapply lt_le. eapply from_wf_lt. ss. auto. }
+    Qed.
+
+    Hypothesis CHOICE: FunctionalChoice_on X tree.
+
+    Lemma kappa_join (os: X -> t) (LT: forall x, lt (os x) kappa)
+      :
+        lt (join os) kappa.
+    Proof.
+      i. hexploit (CHOICE (fun (x: X) (tr: tree) => le (os x) (from_wf tree_lt_well_founded tr))).
+      { i. specialize (LT x). eapply lt_inv in LT. eauto. }
+      i. des.
       econs. instantiate (1:=tree_join f).
       eapply join_supremum. i. etransitivity; eauto.
       eapply lt_le. eapply from_wf_lt. ss. eauto.
+    Qed.
+
+    Lemma kappa_S_inaccessible
+      :
+        S_inaccessible kappa.
+    Proof.
+      econs.
+      { eapply kappa_O. }
+      { eapply kappa_S. }
+      { eapply kappa_join. }
+      { eapply kappa_union. }
+    Qed.
+
+    Lemma kappa_add_inaccessible
+          o (LT: lt o kappa)
+      :
+        inaccessible O (add o) kappa.
+    Proof.
+      eapply inaccessible_rec_inaccessible; eauto.
+      { i. eapply S_le. }
+      { i. rewrite <- S_le_mon. auto. }
+      { eapply kappa_S_inaccessible. }
+    Qed.
+
+    Lemma kappa_add o0 o1 (LT0: lt o0 kappa) (LT1: lt o1 kappa)
+      :
+        lt (add o0 o1) kappa.
+    Proof.
+      eapply kappa_add_inaccessible; auto.
+    Qed.
+
+    Lemma kappa_flip_add_inaccessible
+          o (LT: lt o kappa)
+      :
+        inaccessible O (flip add o) kappa.
+    Proof.
+      hexploit kappa_add_inaccessible; eauto. i.
+      econs; auto.
+      { eapply le_lt_lt; eauto. eapply O_bot. }
+      { i. eapply (@kappa_add_inaccessible _ LT0).(inaccessible_next). auto. }
+      { i. eapply H. auto. }
+      { i. eapply H; auto. }
+    Qed.
+
+    Lemma kappa_mult_inaccessible
+          o (LT: lt o kappa)
+      :
+        inaccessible O (mult o) kappa.
+    Proof.
+      eapply inaccessible_rec_inaccessible; eauto.
+      { i. eapply add_base_l. }
+      { i. eapply add_le_l; auto. }
+      { eapply kappa_flip_add_inaccessible. auto. }
+      { eapply le_lt_lt; eauto. eapply O_bot. }
+    Qed.
+
+    Lemma kappa_mult o0 o1 (LT0: lt o0 kappa) (LT1: lt o1 kappa)
+      :
+        lt (mult o0 o1) kappa.
+    Proof.
+      eapply kappa_mult_inaccessible; auto.
+    Qed.
+
+    Lemma kappa_flip_mult_inaccessible
+          o (LT: lt o kappa)
+      :
+        inaccessible O (flip mult o) kappa.
+    Proof.
+      hexploit kappa_mult_inaccessible; eauto. i.
+      econs; auto.
+      { eapply le_lt_lt; eauto. eapply O_bot. }
+      { i. eapply (@kappa_mult_inaccessible _ LT0).(inaccessible_next). auto. }
+      { i. eapply H. auto. }
+      { i. eapply H; auto. }
     Qed.
   End KAPPA.
 End TYPE.
