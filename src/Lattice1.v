@@ -87,6 +87,14 @@ Section LATTICE.
     forall x i0 (IN: ir x i0),
     exists i1, ir x i1 /\ Ordinal.lt i1 k.
 
+  Lemma inaccessible_larger ir k0 k1 (LE: Ordinal.le k0 k1)
+        (INACCESSIBLE: inaccessible ir k0):
+    inaccessible ir k1.
+  Proof.
+    ii. exploit INACCESSIBLE; eauto. i. des. esplits; eauto.
+    eapply Ordinal.lt_le_lt; eauto.
+  Qed.
+
   (* excluded middle + choice needed *)
   Lemma inaccessible_ordinal_inaccessible
         k (INACCESSIBLE: Ordinal.inaccessible X Ordinal.O Ordinal.S k):
